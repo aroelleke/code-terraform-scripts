@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from machine_actions import TargetSetAction, FollowAction, Actions
 from machine_store import MachineStore
 from page_panel import PagePanel
@@ -23,19 +23,28 @@ VEHICLE_THEME: dict[str, str] = {
 
 
 @dataclass
+class BiomeColors:
+    frozen: str = "#18293d"
+    coastal: str = "#284016"
+    geothermal: str = "#3b2f14"
+    volcanic: str = "#471a15"
+    deep: str = "#353c45"
+
+
+@dataclass
 class MapConfig:
     enabled: bool = True
     auto_charge: bool = True
     throttle: float = 0.5
-    zoom_base: int = 0
+    zoom_base: int = 13
     zoom_level: int = 0
-    zoom_level_max: int = 0
+    zoom_level_max: int = 4
     biomes: bool = True
     outposts: bool = True
     locations: bool = True
     vehicles: bool = True
     drones: bool = True
-    biome_colors: dict[str, str] = ({"f": "#18293d", "c": "#284016", "g": "#3b2f14", "v": "#471a15", "d": "#353c45"},)
+    biome_colors: BiomeColors = field(default_factory=BiomeColors)
 
 
 class MapPanel(PagePanel):
@@ -48,7 +57,7 @@ class MapPanel(PagePanel):
         self.outpost_network: OutpostNetwork = get_component("outpost_network")
         self.power_control: PowerControl = get_component("power_control")
         self.planet: Nocturna = get_component("nocturna")
-        self.store.config.zoom_base: float = 1.3
+
         self.w: int = 0
         self.h: int = 0
         self.map_coords: tuple[int, int] = (0, 0)
@@ -61,6 +70,7 @@ class MapPanel(PagePanel):
 
         self.last_rendered_coords: tuple[int, int] | None = None
 
+        self.action: Action = self.store.get_current_action()
         self.target_coords: tuple[int, int] = (0, 0)
         self.active_map_point: dict | None = None
 
@@ -90,11 +100,9 @@ class MapPanel(PagePanel):
         self.set_map_center()
 
     def set_map_center(self):
-        action: Actions = self.store.get_current_action()
-
         target_coords: tuple[int, int] = (0, 0)
 
-        match action:
+        match self.action:
             case TargetSetAction(coords):
                 target_coords = coords
             case FollowAction(type, target_id):
@@ -136,10 +144,9 @@ class MapPanel(PagePanel):
 
     def draw_header(self):
         self.draw_enable_switch()
-        action = self.store.get_current_action()
 
         self.draw_center_coords()
-        if action.action == "follow":
+        if self.action and self.action.action == "follow":
             self.draw_following()
 
         self.draw_mouse_coords()
@@ -174,13 +181,9 @@ class MapPanel(PagePanel):
         self.panel.draw_text(self.c.x + 0.4, self.c.y + 3, "FOLLOWING", 6, "text-muted")
         self.panel.fill_rect(self.c.x, self.c.y + 6, len("FOLLOWING") * (6 / 1.65) + 0.3, 1, "text-muted")
 
-        # self.c.x += 25
         self.c.y += 15
 
-        action = self.store.get_current_action()
-        target_id = action.target_id
-
-        self.panel.draw_text(self.c.x, self.c.y, target_id, 10, "white" if self.store.config.enabled else "error")
+        self.panel.draw_text(self.c.x, self.c.y, self.action.target_id, 10, "white" if self.store.config.enabled else "error")
         self.c.load()
 
     def draw_mouse_coords(self):
@@ -260,6 +263,7 @@ class MapPanel(PagePanel):
     def draw_map(self):
         center = (self.c.x + (self.w / 2), self.c.y + (self.h / 2))
 
+        # TODO: enable after fixing usage of biome colors from config
         # if self.store.config.biomes:
         #     self.draw_map_biomes(center)
 
@@ -509,40 +513,42 @@ class MapPanel(PagePanel):
             self.draw_switch_config(setting)
             self.c.y += 25
 
-        self.panel.divider(self.c.x, self.c.y, self.c.x + 120, self.c.y)
-        self.c.y += 15
-        self.panel.draw_text(self.c.x, self.c.y, "Biome Colors", 11, "white")
+        # TODO: Apply theme and add theme page where theese biome colors may be changed
+        # self.panel.divider(self.c.x, self.c.y, self.c.x + 120, self.c.y)
+        # self.c.y += 15
+        # self.panel.draw_text(self.c.x, self.c.y, "Biome Colors", 11, "white")
 
-        for biome in ["frozen", "coastal", "geothermal", "volcanic", "deep"]:
-            self.c.y += 20
-            self.draw_biome_color_config(biome)
+        # for biome in ["frozen", "coastal", "geothermal", "volcanic", "deep"]:
+        #     self.c.y += 20
+        #     self.draw_biome_color_config(biome)
 
         self.c.load()
 
     def draw_switch_config(self, setting: str):
         key = f"config.map.{setting}"
-        state = self.draw_switch(setting.capitalize(), key, bool(self.store.config.), {"w": 120})
-        if state != self.store.config["setting"]:
-            self.store.config["setting"] = not self.store.config["setting"]
+        value = bool(getattr(self.store.config, setting))
+
+        state = self.draw_switch(setting.capitalize(), key, value, {"w": 120})
+        if state != value:
+            setattr(self.store.config, setting, not value)
             self.store.save_config()
 
     def draw_biome_color_config(self, biome: str):
         self.c.save()
-        config_key = biome[:1]
-        current_color = self.store.config.biome_colors[config_key]
+        color = getattr(self.store.config.biome_colors, biome)
         element_key = f"map_config_biome_color.{biome}"
 
-        self.panel.fill_rect(self.c.x - 5, self.c.y - 10, 125, 19, current_color)
+        self.panel.fill_rect(self.c.x - 5, self.c.y - 10, 125, 19, color)
         self.panel.fill_rect(self.c.x - 5, self.c.y - 10, 125, 19, "#00000080")
-        self.panel.draw_rect(self.c.x - 5, self.c.y - 10, 125, 19, current_color)
+        self.panel.draw_rect(self.c.x - 5, self.c.y - 10, 125, 19, color)
         self.panel.draw_text(self.c.x, self.c.y, biome.capitalize(), 10, "white")
 
         self.panel.forget(element_key)
         self.c.x += 62
-        new_color = self.panel.text_field(element_key, self.c.x, self.c.y - 10, 58, current_color, size=19)
+        new_color = self.panel.text_field(element_key, self.c.x, self.c.y - 10, 58, color, size=19)
 
-        if new_color != current_color:
-            self.store.config.biome_colors[config_key] = new_color
+        if new_color != color:
+            setattr(self.store.config.biome_colors, biome, new_color)
             self.store.save_config()
         self.c.load()
 
