@@ -1,4 +1,4 @@
-from helper import safe_call_func
+from helper import safe_call_func, average
 from panel_wrapper import PanelWrapper
 
 
@@ -7,11 +7,48 @@ class PagePanel(PanelWrapper):
         super().__init__(panel, key)
         self.root = root
 
+        self.clock: Clock = get_component("clock")
+
+        # FPS
+        self._ENABLE_FPS: bool = True
+        self._LAST_FRAME_SEC: int = 0
+        self._TIME_SINCE_LAST_FRAME: int = 0
+        self._FPS: float = 0
+        self._FPS_HISTORY: list[float] = []
+        self._FPS_HISTORY_LIMIT: int = 10
+
+        # TAB
         self.panels: dict[str, PanelWrapper] = {}
         self.tabs: list[str] = []
         self.tab: str = ""
 
+        # CONFIG
         self.show_config: bool = False
+
+    def calculate_fps(self):
+        CURRENT_FRAME_SEC = self.clock.elapsed_seconds()
+        self._TIME_SINCE_LAST_FRAME = CURRENT_FRAME_SEC - self._LAST_FRAME_SEC
+
+        if self._LAST_FRAME_SEC and self._TIME_SINCE_LAST_FRAME > 0:
+            # self._FPS = int("{:1f}")
+            self._FPS = int(1 / self._TIME_SINCE_LAST_FRAME)
+            self._FPS_HISTORY.insert(0, self._FPS)
+            self._FPS_HISTORY = self._FPS_HISTORY[: self._FPS_HISTORY_LIMIT]
+
+        self._LAST_FRAME_SEC = CURRENT_FRAME_SEC
+
+    def draw_fps(self):
+        # average_fps = average(self._FPS_HISTORY)
+
+        color = "success" if self._FPS >= 5 else "warning" if self._FPS >= 1 else "error"
+        width, height = self.panel.width(), self.panel.height()
+
+        text = str(self._FPS)
+        # text = "{:.3f}".format(self._TIME_SINCE_LAST_FRAME)
+        x = width - 5 - (len(text) * (8 / 1.65))
+        y = height - 4
+
+        self.panel.draw_text(x, y, text, 8, color)
 
     def on_init(self):
         pass
@@ -23,6 +60,10 @@ class PagePanel(PanelWrapper):
     def run(self):
         while self.root:
             self.render(x=5, y=5)
+
+            if self._ENABLE_FPS:
+                self.calculate_fps()
+                self.draw_fps()
 
     def prepare(self, **_):
         if self.root:
