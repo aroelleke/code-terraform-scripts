@@ -6,6 +6,15 @@ def clampl(values: List[number], min: number, max: number):
     return [clamp(value, min, max) for value in values]
 
 
+def average(items: List[Any], key: str = None):
+    if not items:
+        return 0
+
+    if key:
+        items = [i[key] for i in items]
+    return sum(items) / len(items)
+
+
 def calculate_next_step_of_value(value: number, step: number):
     return value - (value % step) + step
 
