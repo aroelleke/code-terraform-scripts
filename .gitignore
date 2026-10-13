@@ -1,0 +1,17 @@
+# Written by Code: Terraform. Machine-specific or regenerated files.
+logs/
+.codeterraform/
+.ruff_cache/
+__pycache__/
+codeterraform-workspace.json
+codeterraform-fleet.json
+codeterraform-scripts.json
+CODE-TERRAFORM-IDE.txt
+pyrightconfig.codeterraform.json
+*.pyi
+typeshed-LICENSE.txt
+*.codeterraform-write.bak
+*.codeterraform-write.tmp
+*.codeterraform-retired-*.bak
+.vscode/
+.zed/
