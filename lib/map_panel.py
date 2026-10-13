@@ -36,7 +36,7 @@ class MapConfig:
     enabled: bool = True
     auto_charge: bool = True
     throttle: float = 0.5
-    zoom_base: int = 13
+    zoom_base: int = 1.3
     zoom_level: int = 0
     zoom_level_max: int = 4
     biomes: bool = True
