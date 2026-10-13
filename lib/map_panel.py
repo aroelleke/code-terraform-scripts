@@ -338,8 +338,9 @@ class MapPanel(PagePanel):
             )
 
     def _get_item_style(self, item: dict) -> dict:
-        radius = 8 * (self.store.config.zoom_base**self.store.config.zoom_level)
-        text_size = 9 * (self.store.config.zoom_base**self.store.config.zoom_level)
+        zoom = self.store.config.zoom_base**self.store.config.zoom_level
+        radius = 8 * zoom
+        text_size = 10 * zoom
 
         style = {
             "radius": radius,
@@ -384,8 +385,6 @@ class MapPanel(PagePanel):
             radius = base_radius + 2 + (base_radius * 0.2)
 
         return active, hover, radius
-
-    # --- Shape Renderer ---
 
     def _draw_shape_rectangle(self, point_coords: tuple[int, int], radius: float, color: str, active: bool, hover: bool, item: dict):
         size = radius * 2.5
@@ -440,8 +439,6 @@ class MapPanel(PagePanel):
             border_color = color if active else "white"
             self.draw_star(point_coords[0], point_coords[1], r1 + 3, r2 + 5, sides, border_color, (r1 + 3) * 0.1)
         self.fill_star(point_coords[0], point_coords[1], r1, r2, sides, color)
-
-    # --- Daten-Mappers ---
 
     def get_map_points(self) -> list[dict]:
         points = []
